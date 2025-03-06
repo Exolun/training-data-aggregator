@@ -82,7 +82,35 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             sendResponse({ success: true });
         });
         return true;
+    } else if (request.action === "saveClipboardContent") {
+        const { url, title, clipboardText } = request;
+        chrome.storage.local.get("trainingData", (result) => {
+            const trainingData = result.trainingData || {};
+            trainingData[url] = {
+                page_url: url,
+                page_content: clipboardText,
+                page_title: title,
+                source: "clipboard",
+                timestamp: new Date().toISOString()
+            };
+            chrome.storage.local.set({ trainingData }, () => {
+                sendResponse({ success: true });
+            });
+        });
+        return true;
+    
+    } else if (request.action === "removePage") {
+        const { url } = request;
+        chrome.storage.local.get("trainingData", (result) => {
+            const trainingData = result.trainingData || {};
+            delete trainingData[url];
+            chrome.storage.local.set({ trainingData }, () => {
+                sendResponse({ success: true });
+            });
+        });
+        return true; 
     }
+    
 });
 
 // Helper function to save or update data in local storage

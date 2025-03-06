@@ -68,58 +68,48 @@ document.addEventListener("DOMContentLoaded", () => {
         chrome.tabs.create({ url: chrome.runtime.getURL("settings.html") });
     });
 
-    // Add event listener for the new Copy Clipboard button
     copyClipboardButton.addEventListener("click", async () => {
         try {
-            // Get the current tab URL
             const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
             const currentURL = tabs[0].url;
             const title = tabs[0].title;
-
-            // Read data from clipboard
             const clipboardText = await navigator.clipboard.readText();
-
+    
             if (!clipboardText) {
                 console.error("Clipboard is empty or permission denied");
                 return;
             }
-
-            // Save the clipboard content with the current URL as key
-            chrome.storage.local.get("trainingData", (result) => {
-                const trainingData = result.trainingData || {};
-
-                // Update or add the entry
-                trainingData[currentURL] = {
-                    page_url: currentURL,
-                    page_content: clipboardText,
-                    page_title: title,
-                    source: "clipboard",
-                    timestamp: new Date().toISOString()
-                };
-
-                // Save back to storage
-                chrome.storage.local.set({ trainingData }, () => {
+    
+            // Send message to background.js to save clipboard content
+            chrome.runtime.sendMessage({
+                action: "saveClipboardContent",
+                url: currentURL,
+                title,
+                clipboardText
+            }, (response) => {
+                if (response && response.success) {
                     console.log("Clipboard content saved successfully for URL:", currentURL);
-                    // Update button to "Update" since we now have data for this URL
                     saveButton.textContent = "Update";
-                });
+                }
             });
         } catch (error) {
             console.error("Error accessing clipboard:", error);
         }
     });
-
+    
     removeButton.addEventListener("click", async () => {
         const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
         const currentURL = tabs[0].url;
-        chrome.storage.local.get("trainingData", (result) => {
-            const trainingData = result.trainingData || {};
-            delete trainingData[currentURL];
-            chrome.storage.local.set({ trainingData }, () => {
+    
+        // Send message to background.js to remove stored data
+        chrome.runtime.sendMessage({
+            action: "removePage",
+            url: currentURL
+        }, (response) => {
+            if (response && response.success) {
                 console.log("Removed data for:", currentURL);
-                // Optionally revert save button text
                 saveButton.textContent = "Save";
-            });
+            }
         });
     });
 });
