@@ -1,14 +1,18 @@
-// background.js (Service Worker)
+import TrainingDatabase from "./trainingdatabase.js";
+
+// ...existing code...
+const trainingDb = new TrainingDatabase();
 
 // Initialize storage keys if needed
 chrome.runtime.onInstalled.addListener(() => {
-    chrome.storage.local.get(["trainingData", "fileName"], (result) => {
-        if (!result.trainingData) {
-            chrome.storage.local.set({ trainingData: {} });
+    trainingDb.getDataset().then((data) => {
+        if (!Object.keys(data).length) {
+            trainingDb.clearDataset();
         }
-        if (!result.fileName) {
-            // Default file name
-            chrome.storage.local.set({ fileName: "trainingData.json" });
+    });
+    trainingDb.getFileName().then((fileName) => {
+        if (!fileName) {
+            trainingDb.updateFileName("trainingData.json");
         }
     });
 });
@@ -16,8 +20,7 @@ chrome.runtime.onInstalled.addListener(() => {
 // Listen for messages from popup.js
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "saveOrUpdatePage") {
-        // In the message listener where saveOrUpdatePage is handled:
-        chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             const tab = tabs[0];
             if (tab?.id) {
                 chrome.scripting.executeScript(
@@ -26,109 +29,71 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         files: ["content_script.js"]
                     },
                     () => {
-                        // After injection, request the content script to return the HTML
                         chrome.tabs.sendMessage(tab.id, { action: "getPageContent" }, (pageContent) => {
                             if (chrome.runtime.lastError) {
                                 console.error("Error retrieving page content:", chrome.runtime.lastError);
                                 sendResponse({ success: false });
                                 return;
                             }
-                            // Save the content in storage with title
-                            saveOrUpdateData(tab.url, pageContent, tab.title).then(() => {
-                                sendResponse({ success: true });
-                            });
+                            trainingDb
+                                .saveOrUpdatePage(tab.url, pageContent, tab.title, "page")
+                                .then(() => sendResponse({ success: true }));
                         });
                     }
                 );
             }
         });
-        // Return true to indicate we'll send response asynchronously
         return true;
     } else if (request.action === "downloadDataset") {
-        // Retrieve dataset and file name, then send to popup for download
-        chrome.storage.local.get(["trainingData", "fileName"], (result) => {
-            sendResponse({
-                success: true,
-                data: result.trainingData || {},
-                fileName: result.fileName || "trainingData.json"
-            });
+        Promise.all([trainingDb.getDataset(), trainingDb.getFileName()]).then(([dataset, fileName]) => {
+            sendResponse({ success: true, data: dataset, fileName: fileName || "trainingData.json" });
         });
         return true;
     } else if (request.action === "getDataset") {
-        // Return the dataset
-        chrome.storage.local.get("trainingData", (result) => {
-            sendResponse({ trainingData: result.trainingData || {} });
+        trainingDb.getDataset().then((data) => {
+            sendResponse({ trainingData: data });
         });
         return true;
     } else if (request.action === "getFileName") {
-        chrome.storage.local.get("fileName", (result) => {
-            sendResponse({ fileName: result.fileName });
+        trainingDb.getFileName().then((fileName) => {
+            sendResponse({ fileName });
         });
         return true;
     } else if (request.action === "updateFileName") {
-        // Update the file name in local storage
-        chrome.storage.local.set({ fileName: request.newFileName }, () => {
+        trainingDb.updateFileName(request.newFileName).then(() => {
             sendResponse({ success: true });
         });
         return true;
     } else if (request.action === "clearDataset") {
-        // Clear all data
-        chrome.storage.local.set({ trainingData: {} }, () => {
+        trainingDb.clearDataset().then(() => {
             sendResponse({ success: true });
         });
         return true;
     } else if (request.action === "updateDataset") {
-        chrome.storage.local.set({ trainingData: request.newDataset }, () => {
+        trainingDb.updateDataset(request.newDataset).then(() => {
             sendResponse({ success: true });
         });
         return true;
     } else if (request.action === "saveClipboardContent") {
         const { url, title, clipboardText } = request;
-        chrome.storage.local.get("trainingData", (result) => {
-            const trainingData = result.trainingData || {};
-            trainingData[url] = {
-                page_url: url,
-                page_content: clipboardText,
-                page_title: title,
-                source: "clipboard",
-                timestamp: new Date().toISOString()
-            };
-            chrome.storage.local.set({ trainingData }, () => {
-                sendResponse({ success: true });
-            });
+        trainingDb.saveOrUpdatePage(url, clipboardText, title, "clipboard").then(() => {
+            sendResponse({ success: true });
         });
         return true;
-    
     } else if (request.action === "removePage") {
-        const { url } = request;
-        chrome.storage.local.get("trainingData", (result) => {
-            const trainingData = result.trainingData || {};
-            delete trainingData[url];
-            chrome.storage.local.set({ trainingData }, () => {
-                sendResponse({ success: true });
-            });
+        removePage(request.url).then(() => {
+            sendResponse({ success: true });
         });
-        return true; 
+        return true;
     }
-    
 });
 
-// Helper function to save or update data in local storage
-async function saveOrUpdateData(url, pageContent, pageTitle) {
+// Helper function to remove a page entry from TrainingDatabase
+async function removePage(url) {
+    const db = await trainingDb.openDatabase();
     return new Promise((resolve) => {
-        chrome.storage.local.get("trainingData", (result) => {
-            const data = result.trainingData || {};
-            // Store as an object with structured fields instead of just the content
-            data[url] = {
-                page_url: url,
-                page_content: pageContent,
-                page_title: pageTitle,
-                source: "page",
-                timestamp: new Date().toISOString()
-            };
-            chrome.storage.local.set({ trainingData: data }, () => {
-                resolve();
-            });
-        });
+        const tx = db.transaction(trainingDb.trainingStore, "readwrite");
+        tx.objectStore(trainingDb.trainingStore).delete(url);
+        tx.oncomplete = () => resolve(true);
     });
 }
