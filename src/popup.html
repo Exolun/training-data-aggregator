@@ -1,0 +1,51 @@
+<!-- popup.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Training Data Aggregator</title>
+  <style>
+    body {
+      width: 200px;
+      font-family: Arial, sans-serif;
+      margin: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    h3 {
+      width: 100%;
+      text-align: center;
+      margin-top: 0;
+      margin-bottom: 16px;
+    }
+    
+    button {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      background-color: #f8f8f8;
+      cursor: pointer;
+    }
+    
+    button:hover {
+      background-color: #e8e8e8;
+    }
+  </style>
+</head>
+<body>
+  <h3>Training Data Aggregator</h3>
+  
+  <button id="saveButton">Save / Update</button>
+  <button id="copyClipboard">Copy Clipboard</button>
+  <button id="removeButton">Remove Data</button>
+  <button id="downloadButton">Download</button>
+  <button id="viewDatasetButton">View Dataset</button>
+  <button id="settingsButton">Settings</button>
+  
+  <script src="popup.js"></script>
+</body>
+</html>

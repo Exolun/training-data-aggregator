@@ -1,0 +1,21 @@
+{
+  "name": "Training Data Aggregator",
+  "description": "Save or update page content into a local training dataset, then download it as JSON.",
+  "version": "1.0",
+  "manifest_version": 3,
+  "permissions": [
+    "clipboardRead",
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

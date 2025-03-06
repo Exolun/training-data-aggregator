@@ -1,0 +1,30 @@
+<!-- dataset_view.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>View Dataset</title>
+  <style>
+    #jsonContainer {
+      width: 90%;
+      height: 70vh;
+      overflow: auto;
+      border: 1px solid #ccc;
+      margin: 10px auto;
+      padding: 10px;
+      white-space: pre;
+    }
+    
+    #clearDatasetButton {
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h3>Current Dataset</h3>
+  <div id="jsonContainer"></div>
+  <button id="clearDatasetButton">Clear Dataset</button>
+
+  <script src="dataset_view.js"></script>
+</body>
+</html>
