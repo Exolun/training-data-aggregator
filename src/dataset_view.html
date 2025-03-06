@@ -5,14 +5,18 @@
   <meta charset="utf-8" />
   <title>View Dataset</title>
   <style>
-    #jsonContainer {
-      width: 90%;
+    #datasetView {
+      width: 95%;
       height: 70vh;
+      margin: 0 auto;
+    }
+    #jsonContainer {
       overflow: auto;
       border: 1px solid #ccc;
       margin: 10px auto;
       padding: 10px;
       white-space: pre;
+      clear: both;
     }
     
     #clearDatasetButton {
@@ -21,12 +25,14 @@
   </style>
 </head>
 <body>
-  <h3>Current Dataset</h3>
-  <div id="jsonContainer"></div>
-  <button id="clearDatasetButton">Clear Dataset</button>
-  <button id="importDatasetButton">Import Dataset</button>
-  <input type="file" id="importFile" accept=".json" style="display:none" />
-
+  <div id="datasetView">
+    <h3>Current Dataset</h3>
+    <div id="jsonContainer"></div>
+    <button id="clearDatasetButton">Clear Dataset</button>
+    <button id="importDatasetButton">Import Dataset</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" />
+  </div>
+    
   <script src="dataset_view.js"></script>
 </body>
 </html>
