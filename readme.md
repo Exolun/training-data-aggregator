@@ -1,7 +1,3 @@
-Below is a sample `README.md` file that explains the **Training Data Aggregator** extension's purpose, features, and usage. Feel free to adjust or expand it based on your own project’s needs.
-
----
-
 # Training Data Aggregator
 
 **Training Data Aggregator** is a Chrome Extension that lets you save the content (HTML) of any web page into a local dataset, then download it as JSON. It’s useful for building small, curated data collections for machine learning or other data-oriented tasks.
@@ -13,7 +9,7 @@ Below is a sample `README.md` file that explains the **Training Data Aggregator*
    - The URL of the page is used as the key in your dataset.
 
 2. **Persistent Dataset**  
-   - The dataset is stored via Chrome’s `storage.local`, so it remains available across browser sessions.
+   - The dataset is stored via an IndexedDB, so it remains available across browser sessions.
 
 3. **Download Dataset**  
    - Exports your dataset as a JSON file (default name: `trainingData.json`) with a single click.
