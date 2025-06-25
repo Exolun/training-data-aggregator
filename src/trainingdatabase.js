@@ -2,8 +2,12 @@ export default class TrainingDatabase {
     constructor() {
         this.dbName = "TrainingDB";
         this.version = 1;
-        this.trainingStore = "trainingData";
+        this.contextStore = "contextData";
         this.settingsStore = "settings";
+        this.defaultMemory = {
+            user_role: "Knowledge Base Expert",
+            topic: "Software Projects"
+        };
     }
 
     openDatabase() {
@@ -12,8 +16,8 @@ export default class TrainingDatabase {
 
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
-                if (!db.objectStoreNames.contains(this.trainingStore)) {
-                    db.createObjectStore(this.trainingStore, { keyPath: "url" });
+                if (!db.objectStoreNames.contains(this.contextStore)) {
+                    db.createObjectStore(this.contextStore, { keyPath: "id" });
                 }
                 if (!db.objectStoreNames.contains(this.settingsStore)) {
                     db.createObjectStore(this.settingsStore, { keyPath: "id" });
@@ -25,61 +29,78 @@ export default class TrainingDatabase {
         });
     }
 
-    async saveOrUpdatePage(url, pageContent, pageTitle, source = "page") {
+    async getContextData() {
         const db = await this.openDatabase();
         return new Promise((resolve) => {
-            const tx = db.transaction(this.trainingStore, "readwrite");
-            const store = tx.objectStore(this.trainingStore);
+            const tx = db.transaction(this.contextStore, "readonly");
+            const store = tx.objectStore(this.contextStore);
+            const request = store.get("context");
+            request.onsuccess = () => {
+                if (request.result) {
+                    resolve(request.result.data);
+                } else {
+                    resolve({
+                        context: {
+                            memory: { ...this.defaultMemory },
+                            files: []
+                        }
+                    });
+                }
+            };
+        });
+    }
+
+    async saveOrUpdatePage(url, pageContent, pageTitle, source = "web_article") {
+        const db = await this.openDatabase();
+        const contextData = await this.getContextData();
+
+        const fileEntry = {
+            name: pageTitle || url,
+            metadata: {
+                source: url,
+                type: source
+            },
+            content: pageContent
+        };
+
+        contextData.context.files = contextData.context.files.filter(
+            f => f.metadata.source !== url
+        );
+        contextData.context.files.push(fileEntry);
+
+        return new Promise((resolve) => {
+            const tx = db.transaction(this.contextStore, "readwrite");
+            const store = tx.objectStore(this.contextStore);
             store.put({
-                url,
-                page_content: pageContent,
-                page_title: pageTitle,
-                source,
-                timestamp: new Date().toISOString()
+                id: "context",
+                data: contextData
             });
             tx.oncomplete = () => resolve(true);
         });
     }
 
     async getDataset() {
-        const db = await this.openDatabase();
-        return new Promise((resolve) => {
-            const tx = db.transaction(this.trainingStore, "readonly");
-            const store = tx.objectStore(this.trainingStore);
-            const data = {};
-            store.openCursor().onsuccess = (e) => {
-                const cursor = e.target.result;
-                if (cursor) {
-                    data[cursor.key] = cursor.value;
-                    cursor.continue();
-                } else {
-                    resolve(data);
-                }
-            };
-        });
+        return this.getContextData();
     }
 
     async clearDataset() {
         const db = await this.openDatabase();
         return new Promise((resolve) => {
-            const tx = db.transaction(this.trainingStore, "readwrite");
-            tx.objectStore(this.trainingStore).clear();
+            const tx = db.transaction(this.contextStore, "readwrite");
+            tx.objectStore(this.contextStore).delete("context");
             tx.oncomplete = () => resolve(true);
         });
     }
 
-    async updateDataset(newDataset) {
+    async updateDataset(newContextData) {
         const db = await this.openDatabase();
         return new Promise((resolve) => {
-            const tx = db.transaction(this.trainingStore, "readwrite");
-            const store = tx.objectStore(this.trainingStore);
-            store.clear();
-            for (const url in newDataset) {
-                store.put({
-                    url,
-                    ...newDataset[url]
-                });
-            }
+            const tx = db.transaction(this.contextStore, "readwrite");
+            const store = tx.objectStore(this.contextStore);
+            store.put({
+                id: "context",
+                data: newContextData
+            });
             tx.oncomplete = () => resolve(true);
         });
     }

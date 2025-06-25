@@ -1,9 +1,7 @@
 import TrainingDatabase from "./trainingdatabase.js";
 
-// ...existing code...
 const trainingDb = new TrainingDatabase();
 
-// Initialize storage keys if needed
 chrome.runtime.onInstalled.addListener(() => {
     trainingDb.getDataset().then((data) => {
         if (!Object.keys(data).length) {
@@ -88,7 +86,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 });
 
-// Helper function to remove a page entry from TrainingDatabase
 async function removePage(url) {
     const db = await trainingDb.openDatabase();
     return new Promise((resolve) => {
