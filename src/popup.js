@@ -1,11 +1,16 @@
 // popup.js
 function setButtonLabel() {
-    // We can request the dataset from background, then compare with current tab URL
+    // Request the dataset from background, then check if current URL exists
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
         const currentURL = tabs[0].url;
-        chrome.storage.local.get("trainingData", (result) => {
-            const data = result.trainingData || {};
-            if (data[currentURL]) {
+        chrome.runtime.sendMessage({ action: "getDataset" }, (response) => {
+            const dataset = response.trainingData || {};
+            const files = dataset?.context?.files || [];
+            
+            // Check if any file has this URL as its source
+            const existingFile = files.find(file => file.metadata?.source === currentURL);
+            
+            if (existingFile) {
                 // If current page is already in the dataset, show 'Update'
                 document.getElementById("saveButton").textContent = "Update";
             } else {

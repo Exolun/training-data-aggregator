@@ -87,10 +87,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 async function removePage(url) {
-    const db = await trainingDb.openDatabase();
-    return new Promise((resolve) => {
-        const tx = db.transaction(trainingDb.trainingStore, "readwrite");
-        tx.objectStore(trainingDb.trainingStore).delete(url);
-        tx.oncomplete = () => resolve(true);
-    });
+    const contextData = await trainingDb.getContextData();
+    
+    // Filter out the file with matching source URL
+    contextData.context.files = contextData.context.files.filter(
+        file => file.metadata?.source !== url
+    );
+    
+    // Update the dataset with the filtered files
+    await trainingDb.updateDataset(contextData);
+    return true;
 }
